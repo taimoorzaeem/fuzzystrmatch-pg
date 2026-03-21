@@ -1,0 +1,71 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  cabal:
+    strategy:
+      matrix:
+        ghc: ['9.4.8','9.6.6','9.8.4','9.10.1','9.12.2']
+        runs-on: [windows-latest, macos-latest, ubuntu-latest]
+      fail-fast: false
+    name: Cabal - ${{ matrix.runs-on }} GHC ${{ matrix.ghc }}
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    - uses: haskell-actions/setup@f9150cb1d140e9a9271700670baa38991e6fa25c # v2
+      with:
+        ghc-version: ${{ matrix.ghc }}
+ 
+    - name: Cache dependencies
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+      with:
+        path: |
+          ~/.cabal
+          ~/.cache/cabal
+          dist-newstyle
+        key: ${{ matrix.runs-on }}-cabal-${{ matrix.ghc }}-${{ hashFiles('fuzzystrmatch-pg.cabal') }}
+        restore-keys: |
+          ${{ matrix.runs-on }}-cabal-${{ matrix.ghc }}
+          ${{ matrix.runs-on }}-cabal-
+
+    - name: Update Cabal package list
+      run: cabal v2-update --with-compiler=ghc-${{ matrix.ghc }}
+ 
+    - name: Build project
+      run: cabal v2-build --with-compiler=ghc-${{ matrix.ghc }}
+
+  stack:
+    strategy:
+      matrix:
+        resolver: ['lts', 'nightly']
+        runs-on: [windows-latest, macos-latest, ubuntu-latest]
+      fail-fast: false
+    name: Stack - ${{ matrix.runs-on }} Resolver ${{ matrix.resolver }}
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    - uses: haskell-actions/setup@f9150cb1d140e9a9271700670baa38991e6fa25c # v2
+      with:
+        enable-stack: true
+
+    - name: Cache dependencies
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
+      with:
+        path:
+          ~/.stack
+          .stack-work
+        key: ${{ matrix.runs-on }}-stack-${{ matrix.resolver }}-${{ hashFiles('stack.yaml') }}
+        restore-keys: |
+          ${{ matrix.runs-on }}-stack-${{ matrix.resolver }}-
+          ${{ matrix.runs-on }}-stack-
+
+    - name: Install dependencies for resolver ${{ matrix.resolver }}
+      run: stack setup --resolver ${{ matrix.resolver }}
+
+    - name: Build the project with resolver ${{ matrix.resolver }}
+      run: stack build --resolver ${{ matrix.resolver }}
