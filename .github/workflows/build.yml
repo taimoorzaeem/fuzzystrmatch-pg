@@ -1,4 +1,4 @@
-name: Build
+name: Build and Test
 
 on:
   push:
@@ -45,6 +45,9 @@ jobs:
     - name: Build project
       run: cabal v2-build --with-compiler=ghc-${{ matrix.ghc }}
 
+    - name: Run tests
+      run: cabal v2-test spec --with-compiler=ghc-${{ matrix.ghc }}
+
   stack:
     strategy:
       matrix:
@@ -81,3 +84,6 @@ jobs:
 
     - name: Build the project with resolver ${{ matrix.resolver }}
       run: stack build --resolver ${{ matrix.resolver }}
+
+    - name: Run spec tests with resolver ${{ matrix.resolver }}
+      run: stack test :spec --resolver ${{ matrix.resolver }}
