@@ -7,7 +7,7 @@ license:            MIT
 license-file:       LICENSE
 author:             Taimoor Zaeem
 maintainer:         Taimoor Zaeem <taimoorzaeem@gmail.com>
-category:           Data, Text, Metrics
+category:           Data, Text, Algorithms
 homepage:           https://github.com/taimoorzaeem/fuzzystrmatch-pg
 bug-reports:        https://github.com/taimoorzaeem/fuzzystrmatch-pg/issues
 build-type:         Simple
@@ -17,6 +17,10 @@ cabal-version:      1.18
 
 tested-with:
     GHC == 9.4.8
+  , GHC == 9.6.6
+  , GHC == 9.8.4
+  , GHC == 9.10.1
+  , GHC == 9.12.2
 
 source-repository head
   type: git
@@ -25,10 +29,27 @@ source-repository head
 library
   default-language:   Haskell2010
   default-extensions: NoImplicitPrelude
+                      OverloadedStrings
   hs-source-dirs:     src
-  exposed-modules:    Data.FuzzyStrMatch.Levenshtein
+  exposed-modules:    Data.FuzzyStrMatch
+                      Data.FuzzyStrMatch.Levenshtein
   build-depends:      base    >= 4.9   && < 4.23
                     , text    >= 1.2.2 && < 2.2
                     , vector  >= 0.11  && < 0.14
+
+  ghc-options:        -Werror -Wall -Wunused-packages
+
+test-suite spec
+  type:               exitcode-stdio-1.0
+  default-language:   Haskell2010
+  default-extensions: NoImplicitPrelude
+                      OverloadedStrings
+  hs-source-dirs:     test/spec
+  main-is:            Main.hs
+  other-modules:      LevenshteinSpec
+  build-depends:      base              >= 4.9   && < 4.23
+                    , fuzzystrmatch-pg
+                    , hspec             >= 2.3   && < 2.12
+                    , text              >= 1.2.2 && < 2.2
 
   ghc-options:        -Werror -Wall -Wunused-packages
