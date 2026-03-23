@@ -45,6 +45,29 @@ import Prelude
 -- mutability + don't need laziness, the right data structure to
 -- use here is "Unboxed Mutable Vector".
 
+-- Calculation Matrix For Wagner-Fisher algorithm:
+-- ==============================================
+--
+--  deletion cost, 1 for each by default
+--        |
+--        | +---+---+---+---+---+---+---+
+--        v | S | I | T | T | I | N | G |
+--      +---+---+---+---+---+---+---+---+
+--      | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |  <-- insertion 1 for each by default
+--  +---|---+---+---+---+---+---+---+---+
+--  | K | 1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+--  +---|---+---+---+---+---+---+---+---+
+--  | I | 2 | 2 | 1 | 2 | 3 | 4 | 5 | 6 |
+--  +---|---+---+---+---+---+---+---+---+
+--  | T | 3 | 3 | 2 | 1 | 2 | 3 | 4 | 5 |
+--  +---|---+---+---+---+---+---+---+---+
+--  | T | 4 | 4 | 3 | 2 | 1 | 2 | 3 | 4 |
+--  +---|---+---+---+---+---+---+---+---+
+--  | E | 5 | 5 | 4 | 3 | 2 | 2 | 3 | 4 |
+--  +---|---+---+---+---+---+---+---+---+
+--  | N | 6 | 6 | 5 | 4 | 3 | 3 | 2 | 3 |  <-- This is our answer!!
+--  +---|---+---+---+---+---+---+---+---+
+
 -- | Calculate levenshtein distance between source and target string
 levenshtein :: Text -> Text -> Int
 levenshtein source target = runST $ do
