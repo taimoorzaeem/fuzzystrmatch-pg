@@ -3,7 +3,7 @@ module LevenshteinSpec where
 import qualified Data.Text as T
 
 import Data.Text (Text)
-import Data.FuzzyStrMatch.Levenshtein (levenshtein)
+import Data.FuzzyStrMatch.Levenshtein
 
 import Test.Hspec
 import Prelude
@@ -44,3 +44,13 @@ spec = do
       -- Should be smth like: forall a b. levenshtein a b == levenshtein b a
       it "application is communtative" $
         levenshtein kitten sitting `shouldBe` (levenshtein sitting kitten)
+
+    context "levenshtein with different costs" $ do
+      it "insertion cost is doubled" $
+        levenshteinWithCosts empty kitten 2 1 1 `shouldBe` 12 -- 6 insertions, so we get 12
+
+      it "deletion cost is doubled" $
+        levenshteinWithCosts kitten empty 1 2 1 `shouldBe` 12 -- 6 deletions, so we get 12
+
+      it "substitution cost is doubled" $
+        levenshteinWithCosts kitten sitting 1 1 2 `shouldBe` 5 -- 2 substitutions + 1 deletion, so we get (2 * 2) + 1 = 5

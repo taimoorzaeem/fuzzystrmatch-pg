@@ -70,7 +70,11 @@ import Prelude
 
 -- | Calculate levenshtein distance between source and target string
 levenshtein :: Text -> Text -> Int
-levenshtein source target = runST $ do
+levenshtein source target = levenshteinWithCosts source target 1 1 1
+
+-- | Calculate the levenshtein distance with different costs
+levenshteinWithCosts :: Text -> Text -> Int -> Int -> Int -> Int
+levenshteinWithCosts source target insCost delCost subCost = runST $ do
   let sLen = T.length source
       tLen = T.length target
 
@@ -79,20 +83,25 @@ levenshtein source target = runST $ do
 
   -- TODO: If possible, refactor this iteration part, looks ugly.
   --       We are dealing with Mutable Vectors here, so maybe this is the way?
-  forLoopM_ 0 tLen (\i -> MVU.write prev i i) -- Init: [0,1,2,..,tLen]
+
+  -- Init: [0,1,2,..,tLen] for default 1 cost of insertion
+  -- Init: [0,2,4,..,tLen * 2] for cost of insertion equal 2 and so on
+  forLoopM_ 0 tLen (\i -> MVU.write prev i (i * insCost))
 
   forLoopM_ 0 (sLen - 1) $ \i -> do
-    MVU.write curr 0 (i + 1) -- init delete cost, goes like 1,2,3...
+    -- Init: delete cost, goes like 1,2,3... for default 1 cost of deletion
+    -- Init: delete cost, goes like 2,4,6... for when cost of deletion is 2 and so on
+    MVU.write curr 0 ((i + 1) * delCost)
 
     -- TODO: Refactor and remove the inlined function
     forLoopM_ 0 (tLen - 1) $ \j -> do
-      subCost <- MVU.read prev j
-      insCost <- MVU.read prev (j + 1)
-      delCost <- MVU.read curr j
+      subCost' <- MVU.read prev j
+      insCost' <- MVU.read prev (j + 1)
+      delCost' <- MVU.read curr j
 
       -- TODO: this is unsafe indexing, not cool (make it safer)
-      let curCost = if T.index source i == T.index target j then 0 else 1
-          minCost  = minimum [ insCost + 1, delCost + 1, subCost + curCost ]
+      let curCost = if T.index source i == T.index target j then 0 else subCost
+          minCost  = minimum [ insCost' + insCost, delCost' + delCost, subCost' + curCost ]
 
       MVU.write curr (j + 1) minCost
 
@@ -101,9 +110,6 @@ levenshtein source target = runST $ do
 
   -- The last one is the answer at target length position
   MVU.read prev tLen
-
-levenshteinWithCosts :: Text -> Text -> Int -> Int -> Int -> Int
-levenshteinWithCosts _ _ _ _ _ = 0
 
 -- Threshold Optimization:
 --  https://en.wikipedia.org/wiki/Wagner-Fischer_algorithm#Possible_modifications
