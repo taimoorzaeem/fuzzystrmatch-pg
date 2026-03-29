@@ -47,9 +47,10 @@ test-suite spec
   hs-source-dirs:     test/spec
   main-is:            Main.hs
   other-modules:      LevenshteinSpec
-  build-depends:      base              >= 4.9   && < 4.23
+  build-depends:      base                  >= 4.9   && < 4.23
                     , fuzzystrmatch-pg
-                    , hspec             >= 2.3   && < 2.12
-                    , text              >= 1.2.2 && < 2.2
+                    , hspec                 >= 2.3   && < 2.12
+                    , quickcheck-instances  >= 0.3.33 && < 0.4
+                    , text                  >= 1.2.2 && < 2.2
 
   ghc-options:        -Werror -Wall -Wunused-packages

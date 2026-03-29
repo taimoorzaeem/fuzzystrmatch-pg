@@ -6,6 +6,8 @@ import Data.Text (Text)
 import Data.FuzzyStrMatch.Levenshtein
 
 import Test.Hspec
+import Test.Hspec.QuickCheck
+import Test.QuickCheck.Instances () -- imports instances only
 import Prelude
 
 empty :: Text
@@ -22,9 +24,8 @@ spec :: Spec
 spec = do
   describe "Test Levenshtein Distance" $ do
     context "should be 0 when inputs are equal" $ do
-      it "when both are non-empty strings" $ do
-        levenshtein kitten kitten `shouldBe` 0
-        levenshtein sitting sitting `shouldBe` 0
+      prop "when both are non-empty strings" $ do
+        \txt -> levenshtein txt txt `shouldBe` 0
 
       it "when both are empty strings" $
         levenshtein empty empty `shouldBe` 0
@@ -33,17 +34,12 @@ spec = do
       it "should be 3 between kitten and sitting" $
         levenshtein kitten sitting `shouldBe` 3
 
-      it "when one argument is empty, distance should be length of other arg" $ do
-        levenshtein kitten empty `shouldBe` (T.length kitten)
-        levenshtein sitting empty `shouldBe` (T.length sitting)
-        levenshtein empty kitten `shouldBe` (T.length kitten)
-        levenshtein empty sitting `shouldBe` (T.length sitting)
+      prop "when one argument is empty, distance should be length of other arg" $ do
+        \source -> levenshtein source empty == (T.length source)
 
     context "order of arguments should not matter" $ do
-      -- Hmm, this looks like a property test. Maybe use QuickCheck?
-      -- Should be smth like: forall a b. levenshtein a b == levenshtein b a
-      it "application is communtative" $
-        levenshtein kitten sitting `shouldBe` (levenshtein sitting kitten)
+      prop "application is commutative" $
+        \source target -> levenshtein source target == (levenshtein target source)
 
     context "levenshtein with different costs" $ do
       it "insertion cost is doubled" $
@@ -54,3 +50,6 @@ spec = do
 
       it "substitution cost is doubled" $
         levenshteinWithCosts kitten sitting 1 1 2 `shouldBe` 5 -- 2 substitutions + 1 deletion, so we get (2 * 2) + 1 = 5
+
+      prop "if arguments order is switched, the result is same when switching insert and delete cost" $
+        \source target cost -> if cost > 0 then levenshteinWithCosts source target cost 1 1 == levenshteinWithCosts target source 1 cost 1 else True
