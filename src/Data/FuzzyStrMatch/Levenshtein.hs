@@ -131,15 +131,14 @@ calculateCurrentCostAndWrite
   -> Int
   -> Int -> Int -> Int
   -> (Int -> ST s ())
-calculateCurrentCostAndWrite source target prev curr i insCost delCost subCost =
-  (\j -> do
-    subCost' <- MVU.read prev j
-    insCost' <- MVU.read prev (j + 1)
-    delCost' <- MVU.read curr j
+calculateCurrentCostAndWrite source target prev curr i insCost delCost subCost j = do
+  subCost' <- MVU.read prev j
+  insCost' <- MVU.read prev (j + 1)
+  delCost' <- MVU.read curr j
 
-    -- NOTE: Although T.index is unsafe, safety can be guaranteed through
-    --       outside bounds checking.
-    let curCost = if T.index source i == T.index target j then 0 else subCost
-        minCost  = minimum [ insCost' + insCost, delCost' + delCost, subCost' + curCost ]
+  -- NOTE: Although T.index is unsafe, safety can be guaranteed through
+  --       outside bounds checking.
+  let curCost = if T.index source i == T.index target j then 0 else subCost
+      minCost  = minimum [ insCost' + insCost, delCost' + delCost, subCost' + curCost ]
 
-    MVU.write curr (j + 1) minCost)
+  MVU.write curr (j + 1) minCost
