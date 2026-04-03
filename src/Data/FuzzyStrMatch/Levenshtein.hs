@@ -7,6 +7,7 @@ Maintainer  : Taimoor Zaeem <taimoorzaeem@gmail.com>
 Stability   : Experimental
 Portability : Portable
 -}
+{-# LANGUAGE RecordWildCards #-}
 module Data.FuzzyStrMatch.Levenshtein
   ( levenshtein
   , levenshteinWithCosts
@@ -45,6 +46,26 @@ import Prelude
 -- mutability + don't need laziness, the right data structure to
 -- use here is "Unboxed Mutable Vector".
 
+-- | Levenshtein distance state
+data LState s = LState {
+    source  :: Text
+  , target  :: Text
+  , sLen    :: Int
+  , tLen    :: Int
+  , prev    :: MVU.MVector s Int
+  , curr    :: MVU.MVector s Int
+  , insCost :: Int
+  , delCost :: Int
+  , subCost :: Int
+}
+
+-- | Initialize the state
+initLState :: Text -> Text -> Int -> Int -> Int -> ST s (LState s)
+initLState s t ins del sub = do
+  prev <- MVU.new $ T.length t + 1
+  curr <- MVU.new $ T.length t + 1
+  return $ LState s t (T.length s) (T.length t) prev curr ins del sub
+
 -- Calculation Matrix For Wagner-Fisher algorithm:
 -- ==============================================
 --
@@ -74,15 +95,9 @@ levenshtein source target = levenshteinWithCosts source target 1 1 1
 
 -- | Calculate the levenshtein distance with different costs
 levenshteinWithCosts :: Text -> Text -> Int -> Int -> Int -> Int
-levenshteinWithCosts source target insCost delCost subCost = runST $ do
-  let sLen = T.length source
-      tLen = T.length target
+levenshteinWithCosts s t ins del sub = runST $ do
 
-  prev <- MVU.new $ tLen + 1
-  curr <- MVU.new $ tLen + 1
-
-  -- TODO: If possible, refactor this iteration part, looks ugly.
-  --       We are dealing with Mutable Vectors here, so maybe this is the way?
+  lState@LState{..} <- initLState s t ins del sub
 
   -- Init: [0,1,2,..,tLen] for default 1 cost of insertion
   -- Init: [0,2,4,..,tLen * 2] for cost of insertion equal 2 and so on
@@ -93,8 +108,7 @@ levenshteinWithCosts source target insCost delCost subCost = runST $ do
     -- Init: delete cost, goes like 2,4,6... for when cost of deletion is 2 and so on
     MVU.write curr 0 ((i + 1) * delCost)
 
-    forLoopM_ 0 (tLen - 1) $
-      calculateCurrentCostAndWrite source target prev curr i insCost delCost subCost
+    forLoopM_ 0 (tLen - 1) $ calculateCurrentCostAndWrite lState i
 
     -- Copy current to previous before next iteration
     MVU.copy prev curr
@@ -123,15 +137,8 @@ forLoopM_ i j f
 -- | Return closure/function/handler to compute the values in a row
 --   This reads the current cell and write the minimum cost
 --   after calculating insert cost, del cost and sub cost
-calculateCurrentCostAndWrite
-  :: Text
-  -> Text
-  -> MVU.MVector s Int
-  -> MVU.MVector s Int
-  -> Int
-  -> Int -> Int -> Int
-  -> (Int -> ST s ())
-calculateCurrentCostAndWrite source target prev curr i insCost delCost subCost j = do
+calculateCurrentCostAndWrite :: LState s -> Int -> (Int -> ST s ())
+calculateCurrentCostAndWrite LState{..} i j = do
   subCost' <- MVU.read prev j
   insCost' <- MVU.read prev (j + 1)
   delCost' <- MVU.read curr j
