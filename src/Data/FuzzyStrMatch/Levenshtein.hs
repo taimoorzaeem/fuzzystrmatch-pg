@@ -93,17 +93,8 @@ levenshteinWithCosts source target insCost delCost subCost = runST $ do
     -- Init: delete cost, goes like 2,4,6... for when cost of deletion is 2 and so on
     MVU.write curr 0 ((i + 1) * delCost)
 
-    -- TODO: Refactor and remove the inlined function
-    forLoopM_ 0 (tLen - 1) $ \j -> do
-      subCost' <- MVU.read prev j
-      insCost' <- MVU.read prev (j + 1)
-      delCost' <- MVU.read curr j
-
-      -- TODO: this is unsafe indexing, not cool (make it safer)
-      let curCost = if T.index source i == T.index target j then 0 else subCost
-          minCost  = minimum [ insCost' + insCost, delCost' + delCost, subCost' + curCost ]
-
-      MVU.write curr (j + 1) minCost
+    forLoopM_ 0 (tLen - 1) $
+      calculateCurrentCostAndWrite source target prev curr i insCost delCost subCost
 
     -- Copy current to previous before next iteration
     MVU.copy prev curr
@@ -128,3 +119,27 @@ forLoopM_ :: Int -> Int -> (Int -> ST s ()) -> ST s ()
 forLoopM_ i j f
   | i > j     = return ()
   | otherwise = f i >> forLoopM_ (i+1) j f
+
+-- | Return closure/function/handler to compute the values in a row
+--   This reads the current cell and write the minimum cost
+--   after calculating insert cost, del cost and sub cost
+calculateCurrentCostAndWrite
+  :: Text
+  -> Text
+  -> MVU.MVector s Int
+  -> MVU.MVector s Int
+  -> Int
+  -> Int -> Int -> Int
+  -> (Int -> ST s ())
+calculateCurrentCostAndWrite source target prev curr i insCost delCost subCost =
+  (\j -> do
+    subCost' <- MVU.read prev j
+    insCost' <- MVU.read prev (j + 1)
+    delCost' <- MVU.read curr j
+
+    -- NOTE: Although T.index is unsafe, safety can be guaranteed through
+    --       outside bounds checking.
+    let curCost = if T.index source i == T.index target j then 0 else subCost
+        minCost  = minimum [ insCost' + insCost, delCost' + delCost, subCost' + curCost ]
+
+    MVU.write curr (j + 1) minCost)
