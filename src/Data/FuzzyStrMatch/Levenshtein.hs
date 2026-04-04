@@ -62,9 +62,14 @@ data LState s = LState {
 -- | Initialize the state
 initLState :: Text -> Text -> Int -> Int -> Int -> ST s (LState s)
 initLState s t ins del sub = do
-  prev <- MVU.new $ T.length t + 1
-  curr <- MVU.new $ T.length t + 1
-  return $ LState s t (T.length s) (T.length t) prev curr ins del sub
+  let sLen = T.length s
+      tLen = T.length t
+  prev <- MVU.new $ tLen + 1
+  -- Init: [0,1,2,..,tLen] for default 1 cost of insertion
+  -- Init: [0,2,4,..,tLen * 2] for cost of insertion equal 2 and so on
+  mapFromUpto 0 tLen (\i -> MVU.write prev i (i * ins))
+  curr <- MVU.new $ tLen + 1
+  return $ LState s t sLen tLen prev curr ins del sub
 
 -- Calculation Matrix For Wagner-Fisher algorithm:
 -- ==============================================
@@ -113,23 +118,9 @@ levenshteinWithCosts :: Text -> Text -> Int -> Int -> Int -> Int
 levenshteinWithCosts s t ins del sub = runST $ do
 
   lState@LState{..} <- initLState s t ins del sub
+  runLevenshtein lState
 
-  -- Init: [0,1,2,..,tLen] for default 1 cost of insertion
-  -- Init: [0,2,4,..,tLen * 2] for cost of insertion equal 2 and so on
-  mapFromUpto 0 tLen (\i -> MVU.write prev i (i * insCost))
-
-  mapFromUpto 0 (sLen - 1) $ \i -> do
-    -- Init: delete cost, goes like 1,2,3... for default 1 cost of deletion
-    -- Init: delete cost, goes like 2,4,6... for when cost of deletion is 2 and so on
-    MVU.write curr 0 ((i + 1) * delCost)
-
-    mapFromUpto 0 (tLen - 1) $ calculateCurrentCostAndWrite lState i
-
-    -- Copy current to previous before next iteration
-    MVU.copy prev curr
-
-  -- The last one is the answer at target length position
-  MVU.read prev tLen
+  MVU.read prev tLen -- The last one is the answer at target length position
 
 -- Threshold Optimization:
 --  https://en.wikipedia.org/wiki/Wagner-Fischer_algorithm#Possible_modifications
@@ -140,6 +131,39 @@ levenshteinLessEqual _ _ _ = 0
 levenshteinLessEqualWithCosts :: Text -> Text -> Int -> Int -> Int -> Int -> Int
 levenshteinLessEqualWithCosts _ _ _ _ _ _ = 0
 
+-- | Run Levenshtein algorithm
+runLevenshtein :: LState s -> ST s ()
+runLevenshtein lState@LState{..} =
+  mapFromUpto 0 (sLen - 1) $ calculateCurrentCostAndWrite lState
+
+-- | Calculate cost for all cells in the current row
+calculateCurrentCostAndWrite :: LState s -> (Int -> ST s ())
+calculateCurrentCostAndWrite lState@LState{..} i = do
+  -- Init: delete cost, goes like 1,2,3... for default 1 cost of deletion
+  -- Init: delete cost, goes like 2,4,6... for when cost of deletion is 2 and so on
+  MVU.write curr 0 ((i + 1) * delCost)
+  mapFromUpto 0 (tLen - 1) $ calculateCurrentCellCostAndWrite lState i
+  MVU.copy prev curr -- Copy current to previous before next iteration
+
+-- | Return closure/function/handler to compute the values in a row
+--   This reads the current cell and write the minimum cost
+--   after calculating insert cost, del cost and sub cost
+calculateCurrentCellCostAndWrite :: LState s -> Int -> (Int -> ST s ())
+calculateCurrentCellCostAndWrite LState{..} i j = do
+  subCost' <- MVU.read prev j
+  insCost' <- MVU.read prev (j + 1)
+  delCost' <- MVU.read curr j
+
+  -- NOTE: Although T.index is unsafe, safety can be guaranteed through
+  --       outside bounds checking.
+
+  -- If the character being compared are not equal, then it costs
+  -- substitution cost.
+  let curCost = if T.index source i == T.index target j then 0 else subCost
+      minCost  = minimum [ insCost' + insCost, delCost' + delCost, subCost' + curCost ]
+
+  MVU.write curr (j + 1) minCost
+
 -- | Map over the vector from index i to j and apply f on i
 mapFromUpto :: Int -> Int -> (Int -> ST s ()) -> ST s ()
 -- "s" is the type signature is a "Phantom Type" which is needed by GHC
@@ -148,19 +172,3 @@ mapFromUpto :: Int -> Int -> (Int -> ST s ()) -> ST s ()
 mapFromUpto i j f
   | i > j     = return ()
   | otherwise = f i >> mapFromUpto (i+1) j f
-
--- | Return closure/function/handler to compute the values in a row
---   This reads the current cell and write the minimum cost
---   after calculating insert cost, del cost and sub cost
-calculateCurrentCostAndWrite :: LState s -> Int -> (Int -> ST s ())
-calculateCurrentCostAndWrite LState{..} i j = do
-  subCost' <- MVU.read prev j
-  insCost' <- MVU.read prev (j + 1)
-  delCost' <- MVU.read curr j
-
-  -- NOTE: Although T.index is unsafe, safety can be guaranteed through
-  --       outside bounds checking.
-  let curCost = if T.index source i == T.index target j then 0 else subCost
-      minCost  = minimum [ insCost' + insCost, delCost' + delCost, subCost' + curCost ]
-
-  MVU.write curr (j + 1) minCost
