@@ -89,6 +89,21 @@ initLState s t ins del sub = do
 --  | N | 6 | 6 | 5 | 4 | 3 | 3 | 2 | 3 |  <-- This is our answer!!
 --  +---|---+---+---+---+---+---+---+---+
 
+-- We only have to use two vectors prev and curr for calculation:
+-- In this example:
+--
+--          +---+---+---+---+---+---+---+
+--          | S | I | T | T | I | N | G |
+--      +---+---+---+---+---+---+---+---+
+--      | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |  <-- prev
+--  +---|---+---+---+---+---+---+---+---+
+--  | K | 1 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |  <-- curr, becomes prev on next i
+--  +---|---+---+---+---+---+---+---+---+
+--  | I | 2 | 2 | 1 | 2 | 3 | 4 | 5 | 6 |  <-- becomes curr on next i and so on
+--  .
+--  .
+--  .
+
 -- | Calculate levenshtein distance between source and target string
 levenshtein :: Text -> Text -> Int
 levenshtein source target = levenshteinWithCosts source target 1 1 1
@@ -101,14 +116,14 @@ levenshteinWithCosts s t ins del sub = runST $ do
 
   -- Init: [0,1,2,..,tLen] for default 1 cost of insertion
   -- Init: [0,2,4,..,tLen * 2] for cost of insertion equal 2 and so on
-  forLoopM_ 0 tLen (\i -> MVU.write prev i (i * insCost))
+  mapFromUpto 0 tLen (\i -> MVU.write prev i (i * insCost))
 
-  forLoopM_ 0 (sLen - 1) $ \i -> do
+  mapFromUpto 0 (sLen - 1) $ \i -> do
     -- Init: delete cost, goes like 1,2,3... for default 1 cost of deletion
     -- Init: delete cost, goes like 2,4,6... for when cost of deletion is 2 and so on
     MVU.write curr 0 ((i + 1) * delCost)
 
-    forLoopM_ 0 (tLen - 1) $ calculateCurrentCostAndWrite lState i
+    mapFromUpto 0 (tLen - 1) $ calculateCurrentCostAndWrite lState i
 
     -- Copy current to previous before next iteration
     MVU.copy prev curr
@@ -125,14 +140,14 @@ levenshteinLessEqual _ _ _ = 0
 levenshteinLessEqualWithCosts :: Text -> Text -> Int -> Int -> Int -> Int -> Int
 levenshteinLessEqualWithCosts _ _ _ _ _ _ = 0
 
--- | Loop over the vector from index i to j and apply f on i
-forLoopM_ :: Int -> Int -> (Int -> ST s ()) -> ST s ()
+-- | Map over the vector from index i to j and apply f on i
+mapFromUpto :: Int -> Int -> (Int -> ST s ()) -> ST s ()
 -- "s" is the type signature is a "Phantom Type" which is needed by GHC
 -- state monad for type checking reasons. At runtime, "s" is nothing. So,
 -- dont' worry about it too much
-forLoopM_ i j f
+mapFromUpto i j f
   | i > j     = return ()
-  | otherwise = f i >> forLoopM_ (i+1) j f
+  | otherwise = f i >> mapFromUpto (i+1) j f
 
 -- | Return closure/function/handler to compute the values in a row
 --   This reads the current cell and write the minimum cost
