@@ -7,3 +7,17 @@ Haskell implementation of PostgreSQL extension/module [fuzzystrmatch](https://ww
 ## Roadmap
 
 - [ ] Levenshtein - Implement Levenshtein distance functions
+
+## Quick Start
+
+```haskell
+import Data.FuzzyStrMatch (levenshtein)
+import Data.Text
+
+kitten = "kitten" :: Text
+
+sitting = "sitting" :: Text
+
+ghci> levenshtein kitten sitting
+3
+```
