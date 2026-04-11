@@ -48,6 +48,7 @@ test-suite spec
   main-is:            Main.hs
   other-modules:      LevenshteinSpec
   build-depends:      base                  >= 4.9   && < 4.23
+                    , criterion
                     , fuzzystrmatch-pg
                     , hspec                 >= 2.3   && < 2.12
                     , quickcheck-instances  >= 0.3.33 && < 0.4
