@@ -53,3 +53,24 @@ spec = do
 
       prop "if arguments order is switched, the result is same when switching insert and delete cost" $
         \source target cost -> if cost > 0 then levenshteinWithCosts source target cost 1 1 == levenshteinWithCosts target source 1 cost 1 else True
+
+
+    -- ================================
+    -- Tests for "levenshteinLessEqual"
+    -- ================================
+    context "levenshtein less equal" $ do
+      prop "for all successful result, it should be less than maxD" $
+        \source target maxD ->
+          case levenshteinLessEqual source target maxD of
+            Just d -> d <= maxD
+            Nothing -> True
+
+      prop "for all successful result, it should be equal to their levenstehin" $
+        \source target maxD ->
+          case levenshteinLessEqual source target maxD of
+            Just d -> d == levenshtein source target
+            Nothing -> True
+
+      it "test on kitten and sitting example" $ do
+        levenshteinLessEqual kitten sitting 3 `shouldBe` (Just 3)
+        levenshteinLessEqual kitten sitting 2 `shouldBe` Nothing
