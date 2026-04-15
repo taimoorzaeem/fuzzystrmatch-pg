@@ -6,7 +6,7 @@ import Data.Text (Text)
 import Data.FuzzyStrMatch.Levenshtein
 
 import Test.Hspec
-import Test.Hspec.QuickCheck
+import Test.QuickCheck (withMaxSuccess, property)
 import Test.QuickCheck.Instances () -- imports instances only
 import Prelude
 
@@ -24,21 +24,21 @@ spec :: Spec
 spec = do
   describe "Test Levenshtein Distance" $ do
     context "should be 0 when inputs are equal" $ do
-      prop "when both are non-empty strings" $ do
+      it "when both are non-empty strings" $ withMaxSuccess 10000 $ property $
         \txt -> levenshtein txt txt `shouldBe` 0
 
       it "when both are empty strings" $
         levenshtein empty empty `shouldBe` 0
 
     context "distance should be equal to expectation" $ do
-      it "should be 3 between kitten and sitting" $
+      it "should be 3 between kitten and sitting" $ withMaxSuccess 10000 $ property $
         levenshtein kitten sitting `shouldBe` 3
 
-      prop "when one argument is empty, distance should be length of other arg" $ do
+      it "when one argument is empty, distance should be length of other arg" $ withMaxSuccess 10000 $ property $
         \source -> levenshtein source empty == (T.length source)
 
     context "order of arguments should not matter" $ do
-      prop "application is commutative" $
+      it "application is commutative" $ withMaxSuccess 10000 $ property $
         \source target -> levenshtein source target == (levenshtein target source)
 
     context "levenshtein with different costs" $ do
@@ -51,7 +51,7 @@ spec = do
       it "substitution cost is doubled" $
         levenshteinWithCosts kitten sitting 1 1 2 `shouldBe` 5 -- 2 substitutions + 1 deletion, so we get (2 * 2) + 1 = 5
 
-      prop "if arguments order is switched, the result is same when switching insert and delete cost" $
+      it "if arguments order is switched, the result is same when switching insert and delete cost" $ withMaxSuccess 10000 $ property $
         \source target cost -> if cost > 0 then levenshteinWithCosts source target cost 1 1 == levenshteinWithCosts target source 1 cost 1 else True
 
 
@@ -59,13 +59,13 @@ spec = do
     -- Tests for "levenshteinLessEqual"
     -- ================================
     context "levenshtein less equal" $ do
-      prop "for all successful result, it should be less than maxD" $
+      it "for all successful result, it should be less than maxD" $ withMaxSuccess 10000 $ property $
         \source target maxD ->
           case levenshteinLessEqual source target maxD of
             Just d -> d <= maxD
             Nothing -> True
 
-      prop "for all successful result, it should be equal to their levenstehin" $
+      it "for all successful result, it should be equal to their levenstehin" $ withMaxSuccess 10000 $ property $
         \source target maxD ->
           case levenshteinLessEqual source target maxD of
             Just d -> d == levenshtein source target

@@ -48,10 +48,10 @@ test-suite spec
   main-is:            Main.hs
   other-modules:      LevenshteinSpec
   build-depends:      base                  >= 4.9   && < 4.23
-                    , criterion
+                    , criterion             >= 1.2   && < 1.7
                     , fuzzystrmatch-pg
                     , hspec                 >= 2.3   && < 2.12
+                    , QuickCheck            >= 2.10  && < 2.19
                     , quickcheck-instances  >= 0.3.33 && < 0.4
                     , text                  >= 1.2.2 && < 2.2
-
   ghc-options:        -Werror -Wall -Wunused-packages

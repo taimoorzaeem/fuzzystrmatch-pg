@@ -1,1 +1,2 @@
 packages: fuzzystrmatch-pg.cabal
+tests: True
