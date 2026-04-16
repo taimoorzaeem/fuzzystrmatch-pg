@@ -6,10 +6,16 @@ License     : MIT
 Maintainer  : Taimoor Zaeem <taimoorzaeem@gmail.com>
 Stability   : Experimental
 Portability : Portable
+
+Determine string similarities and distance
 -}
 module Data.FuzzyStrMatch
   (
-    module Data.FuzzyStrMatch.Levenshtein
+  -- * API
+    levenshtein
+  , levenshteinWithCosts
+  , levenshteinLessEqual
+  , levenshteinLessEqualWithCosts
   )
   where
 

@@ -6,6 +6,8 @@ License     : MIT
 Maintainer  : Taimoor Zaeem <taimoorzaeem@gmail.com>
 Stability   : Experimental
 Portability : Portable
+
+Calculate levenshtein distance between strings
 -}
 {-# LANGUAGE RecordWildCards #-}
 module Data.FuzzyStrMatch.Levenshtein
@@ -122,11 +124,27 @@ initLState s t ins del sub maxD = do
 --  .
 --  .
 
--- | Calculate levenshtein distance between source and target string
+-- |
+-- Calculate levenshtein distance between source and target string
+--
+-- @
+-- >>> levenshtein "kitten" "sitting"
+-- 3
+-- @
 levenshtein :: Text -> Text -> Int
 levenshtein source target = levenshteinWithCosts source target 1 1 1
 
--- | Calculate the levenshtein distance with different costs
+-- |
+-- Calculate the levenshtein distance with different costs
+--
+-- @
+-- >>> levenshteinWithCosts "kitten" "sitting" 1 1 2
+-- 5
+-- @
+--
+-- The costs correspond to insertion cost, deletion cost and substitution
+-- cost respectively. In the above example, the total cost is @5@ because
+-- there are 2 substitions, each with cost 2 and 1 deletion with cost 1.
 levenshteinWithCosts :: Text -> Text -> Int -> Int -> Int -> Int
 levenshteinWithCosts s t ins del sub = runST $ do
 
@@ -190,9 +208,30 @@ mapFromUpto i j f
 -- Threshold Optimization:
 --  https://en.wikipedia.org/wiki/Wagner-Fischer_algorithm#Possible_modifications
 -- =========================
+
+-- |
+-- Calculate the levenshtein distance with an upper bound. If the cost is
+-- more than maximum, it returns @Nothing@.
+--
+-- @
+-- >>> levenshteinLessEqual "kitten" "sitting" 3
+-- Just 3
+-- @
+--
+-- @
+-- >>> levenshteinLessEqual "kitten" "sitting" 2
+-- Nothing
+-- @
+--
+-- It is important to note that this doesn't necessarily calculate the
+-- complete cost and exits early as soon as the minimum costs exceeds
+-- bound, hence much faster.
 levenshteinLessEqual :: Text -> Text -> Int -> Maybe Int
 levenshteinLessEqual source target = levenshteinLessEqualWithCosts source target 1 1 1
 
+-- |
+-- Calculate the levenshtein distance with an upper bound with different
+-- costs. It works same as `levenshteinWithCosts` but with an upper bound.
 levenshteinLessEqualWithCosts :: Text -> Text -> Int -> Int -> Int -> Int -> Maybe Int
 levenshteinLessEqualWithCosts s t ins del sub maxD' = runST $ do
 
