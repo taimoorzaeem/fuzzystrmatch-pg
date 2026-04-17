@@ -1,12 +1,12 @@
 # fuzzystrmatch-pg
 
-[![Build](https://github.com/taimoorzaeem/fuzzystrmatch-pg/actions/workflows/build.yml/badge.svg)](https://github.com/taimoorzaeem/fuzzystrmatch-pg/actions/workflows/build.yml)
+[![Build](https://github.com/taimoorzaeem/fuzzystrmatch-pg/actions/workflows/build.yml/badge.svg)](https://github.com/taimoorzaeem/fuzzystrmatch-pg/actions/workflows/build.yml) [![hackage-docs](https://img.shields.io/badge/hackage-v0.1.0.0-blue)](https://hackage.haskell.org/package/fuzzystrmatch-pg)
 
 Haskell implementation of PostgreSQL extension/module [fuzzystrmatch](https://www.postgresql.org/docs/current/fuzzystrmatch.html).
 
 ## Roadmap
 
-- [ ] Levenshtein - Implement Levenshtein distance functions
+- [x] Levenshtein - Implement Levenshtein distance functions
 
 ## Quick Start
 

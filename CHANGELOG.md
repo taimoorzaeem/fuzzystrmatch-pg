@@ -4,4 +4,4 @@ All notable changes to this package are documented in this file. This project ad
 
 ## 0.1.0.0
 
-- Initial Release
+- Implement Levenshtein distance functions
